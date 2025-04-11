@@ -29,13 +29,6 @@ use App\Database\MySQLConnection;
 use App\Repository\MySQLUserRepository;
 use App\Repository\MySQLUserLogRepository;
 use App\Service\EmailService;
-use App\Controller\RegistrationController;
-use App\Validation\Validator;
-use App\Validation\Rules\EmailFormatRule;
-use App\Validation\Rules\EmailNotExistsRule;
-use App\Validation\Rules\MaxMindRule;
-use App\Validation\Rules\PasswordLengthRule;
-use App\Validation\Rules\PasswordsMatchRule; 
 
 define('DB_HOST', '127.0.0.1');
 define('DB_USER', 'root');
