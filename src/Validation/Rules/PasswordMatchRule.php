@@ -15,7 +15,7 @@ class PasswordsMatchRule implements ValidationRuleInterface
         $this->password = $password;
     }
 
-    public function validate($value, array $context = []): bool
+    public function validate($value): bool
     {
         return $value === $this->password;
     }

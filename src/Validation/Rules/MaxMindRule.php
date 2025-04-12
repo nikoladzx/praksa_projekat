@@ -8,7 +8,14 @@ use App\Validation\ValidationRuleInterface;
 
 class MaxMindRule implements ValidationRuleInterface
 {
-    public function validate($value, array $context = []): bool
+
+    private string $ipaddress;
+
+    public function __construct(string $ipaddress)
+    {
+        $this->ipaddress = $ipaddress;
+    }
+    public function validate($value): bool
     {
         // Simulacija MaxMind provere
         $suspiciousEmails = ['test@example.com', 'fraud@example.org'];
@@ -18,7 +25,7 @@ class MaxMindRule implements ValidationRuleInterface
             return false;
         }
 
-        if (isset($context['data']['ip_address']) && in_array($context['data']['ip_address'], $suspiciousIps)) {
+        if (in_array($this->ipaddress, $suspiciousIps)) {
             return false;
         }
         // Simulacija slučajnog neuspeha provere

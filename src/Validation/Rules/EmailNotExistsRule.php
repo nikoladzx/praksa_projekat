@@ -16,7 +16,7 @@ class EmailNotExistsRule implements ValidationRuleInterface
         $this->userRepository = $userRepository;
     }
 
-    public function validate($value, array $context = []): bool
+    public function validate($value): bool
     {
         return $this->userRepository->findByEmail($value) === null;
     }

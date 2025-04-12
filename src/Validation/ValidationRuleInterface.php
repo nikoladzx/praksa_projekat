@@ -6,6 +6,6 @@ namespace App\Validation;
 
 interface ValidationRuleInterface
 {
-    public function validate($value, array $context): bool;
+    public function validate($value): bool;
     public function getMessage(): string;
 }

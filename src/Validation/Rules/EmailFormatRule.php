@@ -8,7 +8,7 @@ use App\Validation\ValidationRuleInterface;
 
 class EmailFormatRule implements ValidationRuleInterface
 {
-    public function validate($value, array $context = []): bool
+    public function validate($value): bool
     {
     //     $pattern = '/^(?!(?:(?:\x22?\x5C[\x00-\x7E]\x22?)|(?:\x22?[^\x5C\x22]\x22?)){255,
     // })(?!(?:(?:\x22?\x5C[\x00-\x7E]\x22?)|(?:\x22?[^\x5C\x22]\x22?)){65,}@)(?:(?:[\x21\x

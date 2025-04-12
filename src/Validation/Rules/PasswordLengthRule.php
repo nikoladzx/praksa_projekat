@@ -15,7 +15,7 @@ class PasswordLengthRule implements ValidationRuleInterface
         $this->minLength = $minLength;
     }
 
-    public function validate($value, array $context = []): bool
+    public function validate($value): bool
     {
         return is_string($value) && mb_strlen($value) >= $this->minLength;
     }

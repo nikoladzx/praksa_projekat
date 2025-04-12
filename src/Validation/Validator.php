@@ -22,8 +22,7 @@ class Validator implements ValidatorInterface
             if (isset($data[$field])) {
                 foreach ($fieldRules as $rule) {
                     if ($rule instanceof ValidationRuleInterface) {
-                        $context = ['data' => $data];
-                        if (!$rule->validate($data[$field], $context)) {
+                        if (!$rule->validate($data[$field])) {
                             $errors[$field] = $rule->getMessage();
                             break;
                         }
