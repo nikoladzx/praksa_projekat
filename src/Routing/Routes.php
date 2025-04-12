@@ -15,6 +15,9 @@ use App\Service\EmailService;
 use App\Routing\Router;
 use App\Exception\ValidationException;
 use App\Exception\DatabaseException;
+use App\Repository\UserLogRepositoryInterface;
+use App\Repository\UserRepositoryInterface;
+use App\Service\EmailServiceInterface;
 
 $router = new Router();
 
@@ -29,7 +32,7 @@ $router->post('/register', function () use ($container) {
             return ['success' => false, 'error' => 'Sva polja su obavezna'];
         }
         
-        $userRepository = $container->get(MySQLUserRepository::class);
+        $userRepository = $container->get(UserRepositoryInterface::class);
 
         $rules = [
             'email' => [
@@ -46,8 +49,8 @@ $router->post('/register', function () use ($container) {
         ];
         
         $validator = new Validator($rules);
-        $userLogRepository = $container->get(MySQLUserLogRepository::class);
-        $emailService = $container->get(EmailService::class);
+        $userLogRepository = $container->get(UserLogRepositoryInterface::class);
+        $emailService = $container->get(EmailServiceInterface::class);
         
         $controller = new RegistrationController(
             $validator,

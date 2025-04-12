@@ -2,7 +2,11 @@
 
 declare(strict_types=1);
 
-class Container
+namespace App\Container;
+use Exception;
+
+
+class Container implements ContainerInterface
 {
     private array $definitions = [];
     private array $instances = [];

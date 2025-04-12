@@ -23,12 +23,18 @@ require_once __DIR__ . '/src/Controller/RegistrationController.php';
 require_once __DIR__ . '/src/Exception/ValidationException.php';
 require_once __DIR__ . '/src/Exception/DatabaseException.php';
 require_once __DIR__ . '/src/Routing/Router.php';
+require_once __DIR__ . '/src/Container/ContainerInterface.php';
 require_once __DIR__ . '/src/Container/Container.php';
 
 use App\Database\MySQLConnection;
 use App\Repository\MySQLUserRepository;
+use App\Repository\UserRepositoryInterface;
 use App\Repository\MySQLUserLogRepository;
+use App\Repository\UserLogRepositoryInterface;
+use App\Service\EmailServiceInterface;
 use App\Service\EmailService;
+use App\Container\Container;
+
 
 define('DB_HOST', '127.0.0.1');
 define('DB_USER', 'root');
@@ -42,15 +48,15 @@ $container->set(PDO::class, function (Container $c) {
     return $connection->connect();
 });
 
-$container->set(MySQLUserRepository::class, function (Container $c) {
+$container->set(UserRepositoryInterface::class, function (Container $c) {
     return new MySQLUserRepository($c->get(PDO::class));
 });
 
-$container->set(MySQLUserLogRepository::class, function (Container $c) {
+$container->set(UserLogRepositoryInterface::class, function (Container $c) {
     return new MySQLUserLogRepository($c->get(PDO::class));
 });
 
-$container->set(EmailService::class, function (Container $c) {
+$container->set(EmailServiceInterface::class, function (Container $c) {
     return new EmailService();
 });
 
