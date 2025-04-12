@@ -68,11 +68,3 @@ $router->post('/register', function () use ($container) {
         return ['success' => false, 'error' => 'An unexpected error occurred'];
     }
 });
-
-$router->setErrorHandler(404, function($message) {
-    return ['success' => false, 'error' => $message];
-});
-
-$router->setErrorHandler(405, function($message) {
-    return ['success' => false, 'error' => 'Method Not Allowed'];
-});

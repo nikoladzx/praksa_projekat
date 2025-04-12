@@ -7,7 +7,6 @@ namespace App\Routing;
 class Router
 {
     private array $routes = [];
-    private array $errorHandlers = [];
     
     public function addRoute(string $method, string $path, callable $handler): void
     {
@@ -22,11 +21,6 @@ class Router
     public function get(string $path, callable $handler): void
     {
         $this->addRoute('GET', $path, $handler);
-    }
-    
-    public function setErrorHandler(int $code, callable $handler): void
-    {
-        $this->errorHandlers[$code] = $handler;
     }
     
     public function handleRequest(string $method, string $path)
@@ -51,11 +45,6 @@ class Router
     private function handleError(int $code, string $message): array
     {
         http_response_code($code);
-        
-        if (isset($this->errorHandlers[$code])) {
-            return call_user_func($this->errorHandlers[$code], $message);
-        }
-        
         return ['success' => false, 'error' => $message];
     }
 }

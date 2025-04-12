@@ -29,8 +29,6 @@ class Validator implements ValidatorInterface
                         }
                     }
                 }
-            } elseif (in_array('required', $fieldRules)) {
-                $errors[$field] = 'Polje je obavezno.';
             }
         }
         return $errors;

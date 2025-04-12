@@ -19,7 +19,7 @@ class Container
             return $this->instances[$id];
         }
 
-        if (!isset($this->definitions[$id])) {
+        if (!$this->has($id)) {
             throw new Exception("Service with ID '{$id}' is not defined.");
         }
 
