@@ -9,6 +9,7 @@ require_once __DIR__ . '/src/Database/SqlExpression.php';
 require_once __DIR__ . '/src/Database/QueryBuilderInterface.php';
 require_once __DIR__ . '/src/Database/DatabaseQueryBuilder.php';
 require_once __DIR__ . '/src/Repository/RepositoryInterface.php';
+require_once __DIR__ . '/src/Repository/AbstractRepository.php';
 require_once __DIR__ . '/src/Repository/UserRepositoryInterface.php';
 require_once __DIR__ . '/src/Repository/UserLogRepositoryInterface.php';
 require_once __DIR__ . '/src/Repository/MySQLUserRepository.php';

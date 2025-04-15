@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Repository;
 
-interface UserRepositoryInterface extends RepositoryInterface
+interface UserRepositoryInterface
 {
     public function findByEmail(string $email): ?array; 
     public function findUsersPostedInLastDays(int $days): ?array;
