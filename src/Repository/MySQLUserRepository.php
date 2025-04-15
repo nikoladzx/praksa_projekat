@@ -24,6 +24,9 @@ class MySQLUserRepository extends AbstractRepository implements UserRepositoryIn
 
     public function findUsersPostedInLastDays(int $days): ?array
     {
+        if ($days <= 0) {
+            throw new \InvalidArgumentException("Days must be a positive integer.");
+        }
         $users = $this->findBy(['posted' => new SqlExpression("> NOW() - INTERVAL {$days} DAY")]);
         return $users;
     }
