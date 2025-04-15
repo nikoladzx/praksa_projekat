@@ -18,18 +18,35 @@ class Validator implements ValidatorInterface
     public function validate(array $data): array
     {
         $errors = [];
+        
         foreach ($this->rules as $field => $fieldRules) {
-            if (isset($data[$field])) {
-                foreach ($fieldRules as $rule) {
-                    if ($rule instanceof ValidationRuleInterface) {
-                        if (!$rule->validate($data[$field])) {
-                            $errors[$field] = $rule->getMessage();
-                            break;
-                        }
-                    }
-                }
+            if (!isset($data[$field])) {
+                continue;
+            }
+            
+            $fieldValue = $data[$field];
+            $error = $this->validateField($fieldValue, $fieldRules);
+            
+            if ($error) {
+                $errors[$field] = $error;
             }
         }
+        
         return $errors;
+    }
+    
+    private function validateField(mixed $value, array $fieldRules): ?string
+    {
+        foreach ($fieldRules as $rule) {
+            if (!$rule instanceof ValidationRuleInterface) {
+                continue;
+            }
+            
+            if (!$rule->validate($value)) {
+                return $rule->getMessage();
+            }
+        }
+        
+        return null;
     }
 }

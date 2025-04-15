@@ -3,8 +3,9 @@
 declare(strict_types=1);
 
 namespace App\Database;
+use App\Database\DatabaseConnectionInterface;
 
-class MySQLConnection
+class MySQLConnection implements DatabaseConnectionInterface
 {
     private string $host;
     private string $username;

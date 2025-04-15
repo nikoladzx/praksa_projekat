@@ -17,9 +17,11 @@ use App\Exception\ValidationException;
 use App\Exception\DatabaseException;
 use App\Repository\UserLogRepositoryInterface;
 use App\Repository\UserRepositoryInterface;
+use App\Routing\RouterInterface;
 use App\Service\EmailServiceInterface;
+use App\Service\RegistrationServiceInterface;
 
-$router = new Router();
+$router = $container->get(RouterInterface::class);
 
 $router->post('/register', function () use ($container) {
     try {
@@ -31,32 +33,11 @@ $router->post('/register', function () use ($container) {
         if (empty($email) || empty($password) || empty($password2)) {
             return ['success' => false, 'error' => 'Sva polja su obavezna'];
         }
-        
-        $userRepository = $container->get(UserRepositoryInterface::class);
 
-        $rules = [
-            'email' => [
-                new EmailFormatRule(),
-                new EmailNotExistsRule($userRepository),
-                new MaxMindRule($ipAddress)
-            ],
-            'password' => [
-                new PasswordLengthRule(8)
-            ],
-            'password2' => [
-                new PasswordsMatchRule($password)
-            ]
-        ];
-        
-        $validator = new Validator($rules);
-        $userLogRepository = $container->get(UserLogRepositoryInterface::class);
-        $emailService = $container->get(EmailServiceInterface::class);
+        $registrationService = $container->get(RegistrationServiceInterface::class);
         
         $controller = new RegistrationController(
-            $validator,
-            $userRepository,
-            $userLogRepository,
-            $emailService
+            $registrationService
         );
         
         return $controller->register($email, $password, $password2, $ipAddress);

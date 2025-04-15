@@ -5,49 +5,43 @@ declare(strict_types=1);
 namespace App\Repository;
 
 use App\Database\SqlExpression;
-use App\Exception\DatabaseException; 
+use App\Database\QueryBuilderInterface;
+use App\Exception\DatabaseException;
 
 class MySQLUserLogRepository implements UserLogRepositoryInterface
 {
     private \mysqli $connection;
+    private QueryBuilderInterface $queryBuilder;
+    private string $tableName = 'user_log';
 
-    public function __construct(\mysqli $connection)
+    public function __construct(\mysqli $connection, QueryBuilderInterface $queryBuilder)
     {
         $this->connection = $connection;
+        $this->queryBuilder = $queryBuilder;
     }
 
     public function findById(int $id): ?array
     {
-        $conditions = ['id' => $id];
-        $users = $this->findBy($conditions);
+        $logs = $this->findBy(['id' => $id]);
+        return !empty($logs) ? $logs[0] : null;
+    }
 
-        return !empty($users) ? $users[0] : null;
+    public function logUserActivity(int $userId, string $action): ?int
+    {
+        $logData = [
+            'action' => $action,
+            'user_id' => $userId,
+            'log_time' => new SqlExpression('NOW()'),
+        ];
+
+        return $this->create($logData);
     }
 
     public function findBy(array $conditions = []): array
     {
-        $query = "SELECT * FROM `user_log` WHERE 1=1";
-        $types = '';
-        $bindValues = [];
-        
-        foreach ($conditions as $field => $value) {
-            if ($value instanceof SqlExpression) {
-                $query .= " AND `$field` " . $value->getExpression();
-            } else {
-                $query .= " AND `$field` = ?";
-                if (is_int($value)) {
-                    $types .= 'i';
-                } elseif (is_float($value)) {
-                    $types .= 'd';
-                } else {
-                    $types .= 's';
-                }
-                $bindValues[] = $value;
-            }
-        }
-        
-        $stmt = $this->connection->prepare($query);
+        [$query, $types, $bindValues] = $this->queryBuilder->buildSelect($this->tableName, $conditions);
 
+        $stmt = $this->connection->prepare($query);
         if (!$stmt) {
             throw new DatabaseException("Error preparing statement: " . $this->connection->error);
         }
@@ -61,14 +55,14 @@ class MySQLUserLogRepository implements UserLogRepositoryInterface
         }
 
         $result = $stmt->get_result();
-        $users = [];
-        
-        while ($user = $result->fetch_assoc()) {
-            $users[] = $user;
+        $logs = [];
+
+        while ($log = $result->fetch_assoc()) {
+            $logs[] = $log;
         }
-        
+
         $stmt->close();
-        return $users;
+        return $logs;
     }
 
     public function create(array $data): ?int
@@ -77,45 +71,17 @@ class MySQLUserLogRepository implements UserLogRepositoryInterface
             throw new \InvalidArgumentException("Data array cannot be empty for create operation.");
         }
 
-        $fields = [];
-        $placeholders = [];
-        $types = '';
-        $values = [];
-        
-        foreach ($data as $field => $value) {
-            $fields[] = "`$field`";
-            
-            if ($value instanceof SqlExpression) {
-                $placeholders[] = $value->getExpression();
-            } else {
-                $placeholders[] = '?';
-                
-                if (is_int($value)) {
-                    $types .= 'i';
-                } elseif (is_float($value)) {
-                    $types .= 'd';
-                } elseif (is_string($value)) {
-                    $types .= 's';
-                } else {
-                    $types .= 's';
-                    $value = ($value === null) ? null : ($value ? '1' : '0');
-                }
-                
-                $values[] = $value;
-            }
-        }
-        
-        $sql = "INSERT INTO `user_log` (" . implode(', ', $fields) . ") VALUES (" . implode(', ', $placeholders) . ")";
-        
-        $stmt = $this->connection->prepare($sql);
+        [$query, $types, $values] = $this->queryBuilder->buildInsert($this->tableName, $data);
+
+        $stmt = $this->connection->prepare($query);
         if (!$stmt) {
-            throw new DatabaseException("Error preparing statement: " . $this->connection->error . " SQL: " . $sql);
+            throw new DatabaseException("Error preparing statement: " . $this->connection->error . " SQL: " . $query);
         }
-        
+
         if (!empty($values)) {
             $stmt->bind_param($types, ...$values);
         }
-        
+
         if ($stmt->execute()) {
             $insertId = $this->connection->insert_id;
             $stmt->close();
@@ -130,71 +96,18 @@ class MySQLUserLogRepository implements UserLogRepositoryInterface
     public function update(int $id, array $data, array $conditions = []): bool
     {
         if (empty($data)) {
-            return true; 
+            return true;
         }
 
-        $setClauses = [];
-        $types = '';
-        $values = [];
-        
-        foreach ($data as $field => $value) {
-            if ($value instanceof SqlExpression) {
-                $setClauses[] = "`$field` = " . $value->getExpression();
-            } else {
-                $setClauses[] = "`$field` = ?";
-                
-                if (is_int($value)) {
-                    $types .= 'i';
-                } elseif (is_float($value)) {
-                    $types .= 'd';
-                } elseif (is_string($value)) {
-                    $types .= 's';
-                } else {
-                    $types .= 's';
-                    $value = ($value === null) ? null : ($value ? '1' : '0');
-                }
-                
-                $values[] = $value;
-            }
-        }
-        
-        $sql = "UPDATE `user_log` SET " . implode(', ', $setClauses) . " WHERE `id` = ?";
-        $types .= 'i';
-        $values[] = $id;
-        
-        $whereClauses = [];
-        foreach ($conditions as $field => $value) {
-            if ($value instanceof SqlExpression) {
-                $whereClauses[] = "`$field` " . $value->getExpression();
-            } else {
-                $whereClauses[] = "`$field` = ?";
-                
-                if (is_int($value)) {
-                    $types .= 'i';
-                } elseif (is_float($value)) {
-                    $types .= 'd';
-                } elseif (is_string($value)) {
-                    $types .= 's';
-                } else {
-                    $types .= 's';
-                    $value = ($value === null) ? null : ($value ? '1' : '0');
-                }
-                
-                $values[] = $value;
-            }
-        }
-        
-        if (!empty($whereClauses)) {
-            $sql .= " AND " . implode(' AND ', $whereClauses);
-        }
-        
-        $stmt = $this->connection->prepare($sql);
+        [$query, $types, $values] = $this->queryBuilder->buildUpdate($this->tableName, $id, $data, $conditions);
+
+        $stmt = $this->connection->prepare($query);
         if (!$stmt) {
-            throw new DatabaseException("Error preparing statement: " . $this->connection->error . " SQL: " . $sql);
+            throw new DatabaseException("Error preparing statement: " . $this->connection->error . " SQL: " . $query);
         }
-        
+
         $stmt->bind_param($types, ...$values);
-        
+
         if ($stmt->execute()) {
             $success = $stmt->affected_rows >= 0;
             $stmt->close();

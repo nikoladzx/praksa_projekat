@@ -4,56 +4,51 @@ declare(strict_types=1);
 
 namespace App\Repository;
 
+use App\Database\QueryBuilderInterface;
+use App\Exception\DatabaseException;
 use App\Database\SqlExpression;
-use App\Exception\DatabaseException; 
 
 class MySQLUserRepository implements UserRepositoryInterface
 {
     private \mysqli $connection;
+    private QueryBuilderInterface $queryBuilder;
+    private string $tableName = 'user';
 
-    public function __construct(\mysqli $connection)
+    public function __construct(\mysqli $connection, QueryBuilderInterface $queryBuilder)
     {
         $this->connection = $connection;
+        $this->queryBuilder = $queryBuilder;
     }
 
     public function findById(int $id): ?array
     {
-        $conditions = ['id' => $id];
-        $users = $this->findBy($conditions);
-
+        $users = $this->findBy(['id' => $id]);
         return !empty($users) ? $users[0] : null;
+    }
+
+    public function findByEmail(string $email): ?array
+    {
+        $users = $this->findBy(['email' => $email]);
+        return !empty($users) ? $users[0] : null;
+    }
+
+    public function findUsersPostedInLastDays(int $days): ?array
+    {
+        $users = $this->findBy(['posted' => new SqlExpression("> NOW() - INTERVAL {$days} DAY")]);
+        return $users;
     }
 
     public function findBy(array $conditions = []): array
     {
-        $query = "SELECT * FROM `user` WHERE 1=1";
-        $types = '';
-        $bindValues = [];
-        
-        foreach ($conditions as $field => $value) {
-            if ($value instanceof SqlExpression) {
-                $query .= " AND `$field` " . $value->getExpression();
-            } else {
-                $query .= " AND `$field` = ?";
-                if (is_int($value)) {
-                    $types .= 'i';
-                } elseif (is_float($value)) {
-                    $types .= 'd';
-                } else {
-                    $types .= 's';
-                }
-                $bindValues[] = $value;
-            }
-        }
-        
-        $stmt = $this->connection->prepare($query);
+        [$query, $types, $values] = $this->queryBuilder->buildSelect($this->tableName, $conditions);
 
+        $stmt = $this->connection->prepare($query);
         if (!$stmt) {
             throw new DatabaseException("Error preparing statement: " . $this->connection->error);
         }
 
-        if (!empty($bindValues)) {
-            $stmt->bind_param($types, ...$bindValues);
+        if (!empty($values)) {
+            $stmt->bind_param($types, ...$values);
         }
 
         if (!$stmt->execute()) {
@@ -62,21 +57,23 @@ class MySQLUserRepository implements UserRepositoryInterface
 
         $result = $stmt->get_result();
         $users = [];
-        
+
         while ($user = $result->fetch_assoc()) {
             $users[] = $user;
         }
-        
+
         $stmt->close();
         return $users;
     }
 
-    public function findByEmail(string $email): ?array
+    public function register(string $email, string $hashedPassword, string $ipAddress): int
     {
-        $conditions = ['email' => $email];
-        $users = $this->findBy($conditions);
-
-        return !empty($users) ? $users[0] : null;
+        return $this->create([
+            'email' => $email,
+            'password' => $hashedPassword,
+            'registration_ip' => $ipAddress,
+            'posted' => new SqlExpression('NOW()'),
+        ]);
     }
 
     public function create(array $data): ?int
@@ -85,45 +82,17 @@ class MySQLUserRepository implements UserRepositoryInterface
             throw new \InvalidArgumentException("Data array cannot be empty for create operation.");
         }
 
-        $fields = [];
-        $placeholders = [];
-        $types = '';
-        $values = [];
-        
-        foreach ($data as $field => $value) {
-            $fields[] = "`$field`";
-            
-            if ($value instanceof SqlExpression) {
-                $placeholders[] = $value->getExpression();
-            } else {
-                $placeholders[] = '?';
-                
-                if (is_int($value)) {
-                    $types .= 'i';
-                } elseif (is_float($value)) {
-                    $types .= 'd';
-                } elseif (is_string($value)) {
-                    $types .= 's';
-                } else {
-                    $types .= 's';
-                    $value = ($value === null) ? null : ($value ? '1' : '0');
-                }
-                
-                $values[] = $value;
-            }
-        }
-        
-        $sql = "INSERT INTO `user` (" . implode(', ', $fields) . ") VALUES (" . implode(', ', $placeholders) . ")";
-        
-        $stmt = $this->connection->prepare($sql);
+        [$query, $types, $values] = $this->queryBuilder->buildInsert($this->tableName, $data);
+
+        $stmt = $this->connection->prepare($query);
         if (!$stmt) {
-            throw new DatabaseException("Error preparing statement: " . $this->connection->error . " SQL: " . $sql);
+            throw new DatabaseException("Error preparing statement: " . $this->connection->error . " SQL: " . $query);
         }
-        
+
         if (!empty($values)) {
             $stmt->bind_param($types, ...$values);
         }
-        
+
         if ($stmt->execute()) {
             $insertId = $this->connection->insert_id;
             $stmt->close();
@@ -138,71 +107,18 @@ class MySQLUserRepository implements UserRepositoryInterface
     public function update(int $id, array $data, array $conditions = []): bool
     {
         if (empty($data)) {
-            return true; 
+            return true;
         }
 
-        $setClauses = [];
-        $types = '';
-        $values = [];
-        
-        foreach ($data as $field => $value) {
-            if ($value instanceof SqlExpression) {
-                $setClauses[] = "`$field` = " . $value->getExpression();
-            } else {
-                $setClauses[] = "`$field` = ?";
-                
-                if (is_int($value)) {
-                    $types .= 'i';
-                } elseif (is_float($value)) {
-                    $types .= 'd';
-                } elseif (is_string($value)) {
-                    $types .= 's';
-                } else {
-                    $types .= 's';
-                    $value = ($value === null) ? null : ($value ? '1' : '0');
-                }
-                
-                $values[] = $value;
-            }
-        }
-        
-        $sql = "UPDATE `user` SET " . implode(', ', $setClauses) . " WHERE `id` = ?";
-        $types .= 'i';
-        $values[] = $id;
-        
-        $whereClauses = [];
-        foreach ($conditions as $field => $value) {
-            if ($value instanceof SqlExpression) {
-                $whereClauses[] = "`$field` " . $value->getExpression();
-            } else {
-                $whereClauses[] = "`$field` = ?";
-                
-                if (is_int($value)) {
-                    $types .= 'i';
-                } elseif (is_float($value)) {
-                    $types .= 'd';
-                } elseif (is_string($value)) {
-                    $types .= 's';
-                } else {
-                    $types .= 's';
-                    $value = ($value === null) ? null : ($value ? '1' : '0');
-                }
-                
-                $values[] = $value;
-            }
-        }
-        
-        if (!empty($whereClauses)) {
-            $sql .= " AND " . implode(' AND ', $whereClauses);
-        }
-        
-        $stmt = $this->connection->prepare($sql);
+        [$query, $types, $values] = $this->queryBuilder->buildUpdate($this->tableName, $id, $data, $conditions);
+
+        $stmt = $this->connection->prepare($query);
         if (!$stmt) {
-            throw new DatabaseException("Error preparing statement: " . $this->connection->error . " SQL: " . $sql);
+            throw new DatabaseException("Error preparing statement: " . $this->connection->error . " SQL: " . $query);
         }
-        
+
         $stmt->bind_param($types, ...$values);
-        
+
         if ($stmt->execute()) {
             $success = $stmt->affected_rows >= 0;
             $stmt->close();

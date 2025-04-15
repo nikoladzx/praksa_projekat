@@ -6,5 +6,9 @@ namespace App\Repository;
 
 interface UserRepositoryInterface extends RepositoryInterface
 {
-    public function findByEmail(string $email): ?array;   
+    public function findByEmail(string $email): ?array; 
+    public function findUsersPostedInLastDays(int $days): ?array;
+    public function register(string $email, string $hashedPassword, string $ipAddress): int;
+
+    
 }

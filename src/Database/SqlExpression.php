@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Database;
 
-class SqlExpression
+class SqlExpression implements SqlExpressionInterface
 {
     private string $expression;
 
